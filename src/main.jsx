@@ -523,8 +523,6 @@ function App() {
   }, [motionRuntime]);
 
   useEffect(() => {
-    if (!motionRuntime) return undefined;
-    const { ScrollTrigger } = motionRuntime;
     let cancelled = false;
     const bitmaps = new Map();
     const pending = new Set();
@@ -536,9 +534,10 @@ function App() {
     const cacheRadius = frameDirectory === 'frames-4k' ? 3 : 5;
     let currentFrame = 0;
     let scrollDirection = 1;
+    let previousScrollTop = window.scrollY;
     let activeLoads = 0;
     let drawQueued = false;
-    let trigger;
+    let scrollFrame = 0;
 
     const drawFrame = (target) => {
       let image = bitmaps.get(target);
@@ -647,11 +646,31 @@ function App() {
     };
     const onResize = () => {
       resizeCanvas();
-      queuePaint();
-      ScrollTrigger.refresh();
+      updateSequence();
+    };
+    const updateSequence = () => {
+      const hero = heroRef.current;
+      if (!hero) return;
+      const scrollTop = window.scrollY;
+      if (scrollTop !== previousScrollTop) scrollDirection = scrollTop > previousScrollTop ? 1 : -1;
+      previousScrollTop = scrollTop;
+      const scrollDistance = Math.max(1, hero.offsetHeight - window.innerHeight);
+      const progress = clamp(-hero.getBoundingClientRect().top / scrollDistance, 0, 1);
+      currentFrame = Math.min(FRAME_COUNT - 1, Math.round(progress * (FRAME_COUNT - 1)));
+      const handoff = Math.max(0, Math.min(1, (currentFrame - 59) / (FRAME_COUNT - 1 - 59)));
+      heroStageRef.current?.style.setProperty('--handoff-darkness', handoff.toFixed(3));
+      requestWindow(currentFrame, scrollDirection);
+    };
+    const onScroll = () => {
+      if (scrollFrame) return;
+      scrollFrame = requestAnimationFrame(() => {
+        scrollFrame = 0;
+        updateSequence();
+      });
     };
     resizeCanvas();
     window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onScroll, { passive: true });
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reducedMotion) {
@@ -659,23 +678,7 @@ function App() {
       heroStageRef.current?.style.setProperty('--handoff-darkness', '1');
       requestWindow(currentFrame, -1);
     } else {
-      trigger = ScrollTrigger.create({
-        trigger: heroRef.current,
-        start: 'top top',
-        end: 'bottom bottom',
-        scrub: 0.12,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
-        onUpdate: (self) => {
-          currentFrame = Math.min(FRAME_COUNT - 1, Math.round(self.progress * (FRAME_COUNT - 1)));
-          if (self.direction) scrollDirection = self.direction;
-          const handoff = Math.max(0, Math.min(1, (currentFrame - 59) / (FRAME_COUNT - 1 - 59)));
-          heroStageRef.current?.style.setProperty('--handoff-darkness', handoff.toFixed(3));
-          requestWindow(currentFrame, scrollDirection);
-        },
-      });
-      heroStageRef.current?.style.setProperty('--handoff-darkness', '0');
-      requestWindow(0, 1);
+      updateSequence();
     }
 
     const heroPoster = heroStageRef.current?.querySelector('.hero-stage__poster');
@@ -685,14 +688,13 @@ function App() {
     Promise.all([
       document.fonts?.ready || Promise.resolve(),
       heroPosterReady,
-    ]).then(() => {
-      if (!cancelled) ScrollTrigger.refresh();
-    });
+    ]).then(() => { if (!cancelled) queuePaint(); });
 
     return () => {
       cancelled = true;
+      if (scrollFrame) cancelAnimationFrame(scrollFrame);
+      window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
-      trigger?.kill();
       for (const controller of controllers.values()) controller.abort();
       for (const bitmap of bitmaps.values()) bitmap.close();
       bitmaps.clear();

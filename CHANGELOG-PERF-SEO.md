@@ -6,7 +6,7 @@
 - Added a branded 404 page, canonical URLs, page-specific descriptions and social metadata, a sitemap, robots rules, and Person/WebSite structured data.
 - Kept a text-rich HTML page available before React starts, so crawlers and link previews can read the portfolio without waiting for client rendering.
 - Fixed the hero loading poster so it remains visible until the first animation frame is ready. Added a high-priority first-frame preload and kept the highest-resolution frame set for displays that can use it.
-- Reduced work in the scroll-frame renderer and deferred GSAP, ScrollTrigger, and Lenis until browser idle time or the visitor’s first interaction. The animation still runs when the visitor scrolls.
+- Reduced work in the scroll-frame renderer and deferred GSAP, ScrollTrigger, and Lenis until browser idle time or the visitor’s first interaction. The hero sequence reads native scroll progress immediately, so its first frame update does not wait for those libraries to load.
 - Converted the four role-card images to WebP. Their combined file size fell from about 643 KB to about 346 KB, while the original JPEGs remain in the repository.
 - Added caching and security response headers. No application dependencies were added; the dependency audit previously reported zero vulnerabilities.
 
