@@ -526,7 +526,6 @@ function App() {
     let cancelled = false;
     const bitmaps = new Map();
     const pending = new Set();
-    const controllers = new Map();
     const loadQueue = [];
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d', { alpha: false, desynchronized: true });
@@ -578,13 +577,11 @@ function App() {
         const index = loadQueue.shift();
         if (index < 0 || index >= FRAME_COUNT || bitmaps.has(index) || pending.has(index)) continue;
 
-        const controller = new AbortController();
         pending.add(index);
-        controllers.set(index, controller);
         activeLoads += 1;
         (async () => {
           try {
-            const response = await fetch(frameUrl(index, frameDirectory), { signal: controller.signal });
+            const response = await fetch(frameUrl(index, frameDirectory), { priority: 'high' });
             if (!response.ok) throw new Error('Frame ' + (index + 1) + ' could not be loaded');
             const bitmap = await createImageBitmap(await response.blob());
             if (cancelled || Math.abs(index - currentFrame) > cacheRadius) {
@@ -604,7 +601,6 @@ function App() {
             // Keep the nearest available frame visible while this one loads.
           } finally {
             pending.delete(index);
-            controllers.delete(index);
             activeLoads -= 1;
             pumpLoads();
           }
@@ -613,16 +609,17 @@ function App() {
     };
 
     const requestWindow = (target, direction) => {
-      // Fast scrolls can make the in-flight frames obsolete. Cancel those
-      // downloads immediately so the current frame is not stuck behind them.
-      for (const [frame, controller] of controllers) {
-        if (Math.abs(frame - target) > cacheRadius) controller.abort();
-      }
+      // Keep in-flight requests alive. Aborting a frame and immediately
+      // requesting it again can leave it marked pending until the fetch
+      // settles, so a fast first scroll may never enqueue the target frame.
       const prioritizedFrames = [target];
       for (let offset = 1; offset <= cacheRadius; offset += 1) prioritizedFrames.push(target + (direction * offset));
       for (let offset = 1; offset <= Math.min(2, cacheRadius); offset += 1) prioritizedFrames.push(target - (direction * offset));
-      loadQueue.splice(0, loadQueue.length, ...prioritizedFrames.filter((frame) => (
-        frame >= 0 && frame < FRAME_COUNT && !bitmaps.has(frame) && !pending.has(frame)
+      const retainedFrames = loadQueue.filter((frame) => Math.abs(frame - target) <= cacheRadius);
+      loadQueue.splice(0, loadQueue.length, ...[...prioritizedFrames, ...retainedFrames].filter((frame, index, frames) => (
+        frames.indexOf(frame) === index
+        && Math.abs(frame - target) <= cacheRadius
+        && frame >= 0 && frame < FRAME_COUNT && !bitmaps.has(frame) && !pending.has(frame)
       )));
       for (const [frame, bitmap] of bitmaps) {
         if (Math.abs(frame - target) > cacheRadius) {
@@ -695,7 +692,6 @@ function App() {
       if (scrollFrame) cancelAnimationFrame(scrollFrame);
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onResize);
-      for (const controller of controllers.values()) controller.abort();
       for (const bitmap of bitmaps.values()) bitmap.close();
       bitmaps.clear();
     };
