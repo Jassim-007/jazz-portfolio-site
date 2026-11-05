@@ -9,11 +9,17 @@ import './style.css';
 gsap.registerPlugin(ScrollTrigger);
 
 const FRAME_COUNT = 120;
+const getCanvasDpr = () => {
+  const lowPower = window.matchMedia('(max-width: 760px)').matches
+    || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4)
+    || (navigator.deviceMemory && navigator.deviceMemory <= 4);
+  return Math.min(window.devicePixelRatio || 1, lowPower ? 1.5 : 2);
+};
 const getFrameDirectory = () => {
-  const renderScale = Math.min(window.devicePixelRatio || 1, 2);
+  const renderScale = getCanvasDpr();
   const neededPixels = Math.max(window.innerWidth, window.innerHeight) * renderScale;
-  if (neededPixels <= 1280) return 'frames';
-  if (neededPixels <= 1920) return 'frames-hd';
+  if (neededPixels <= 1600) return 'frames';
+  if (neededPixels <= 2560) return 'frames-hd';
   return 'frames-4k';
 };
 const frameUrl = (index, directory) => '/' + directory + '/ezgif-frame-' + String(index + 1).padStart(3, '0') + '.jpg';
@@ -109,8 +115,8 @@ function SmoothScrollRail({ children, mode, label }) {
           ? 1 - ((1 - scale) / 0.9) * 0.65
           : 1;
         node.style.transform = `translate3d(${left + push}px, -50%, 0) scale(${scale})`;
-        node.style.opacity = '1';
-        node.style.filter = dim < 0.999 ? `brightness(${dim})` : 'none';
+        node.style.opacity = String(dim);
+        node.style.filter = 'none';
         node.style.zIndex = String(1000 + Math.round(scale * 100));
       }
 
@@ -331,7 +337,8 @@ function CollectionPage({ page }) {
   });
 
   return (
-    <main className="collection-page">
+    <main className="collection-page" id="main-content" tabIndex="-1">
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <header className="collection-topbar">
         <a className="brand-mark" href="/" aria-label="Jazz, home">JAZZ<span>.</span></a>
         <nav aria-label="Portfolio collections">
@@ -499,14 +506,9 @@ function App() {
       }
       if (!image) return;
 
-      const bounds = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const width = Math.round(bounds.width * dpr);
-      const height = Math.round(bounds.height * dpr);
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
-      }
+      const width = canvas.width;
+      const height = canvas.height;
+      if (!width || !height) return;
       const scale = Math.max(width / image.width, height / image.height);
       const drawWidth = image.width * scale;
       const drawHeight = image.height * scale;
@@ -585,10 +587,22 @@ function App() {
       queuePaint();
     };
 
+    const resizeCanvas = () => {
+      const bounds = canvas.getBoundingClientRect();
+      const dpr = getCanvasDpr();
+      const width = Math.round(bounds.width * dpr);
+      const height = Math.round(bounds.height * dpr);
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+    };
     const onResize = () => {
+      resizeCanvas();
       queuePaint();
       ScrollTrigger.refresh();
     };
+    resizeCanvas();
     window.addEventListener('resize', onResize);
 
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -616,7 +630,14 @@ function App() {
       requestWindow(0, 1);
     }
 
-    document.fonts?.ready.then(() => {
+    const heroPoster = heroStageRef.current?.querySelector('.hero-stage__poster');
+    const heroPosterReady = heroPoster?.decode
+      ? heroPoster.decode().catch(() => undefined)
+      : Promise.resolve();
+    Promise.all([
+      document.fonts?.ready || Promise.resolve(),
+      heroPosterReady,
+    ]).then(() => {
       if (!cancelled) ScrollTrigger.refresh();
     });
 
@@ -631,11 +652,12 @@ function App() {
   }, []);
 
   return (
-    <main className="portfolio" ref={portfolioRef}>
+    <main className="portfolio" id="main-content" tabIndex="-1" ref={portfolioRef}>
+      <a className="skip-link" href="#main-content">Skip to content</a>
       <section className="hero-scroll" ref={heroRef} aria-label="Scroll-driven portrait introduction">
         <div className="hero-stage" ref={heroStageRef}>
-          <img className={'hero-stage__poster' + (ready ? ' hero-stage__poster--loaded' : '')} src="/frames/ezgif-frame-001.jpg" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           <canvas className="hero-stage__canvas" ref={canvasRef} aria-hidden="true" />
+          <img className={'hero-stage__poster' + (ready ? ' hero-stage__poster--loaded' : '')} src="/frames/ezgif-frame-001.jpg" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           <div className="hero-stage__shade" aria-hidden="true" />
           <div className="hero-stage__handoff" aria-hidden="true" />
           <header className="hero-topbar">
@@ -657,7 +679,7 @@ function App() {
           <h2><span className="presence__title-line">I learn by making.</span><span className="presence__title-line">I make ideas real.</span></h2>
           <p className="presence__summary">I’m a student and creator, exploring code, video, and mobile photography. Each project starts with curiosity and gets better with every version.</p>
         </div>
-        <div className="identity-grid" aria-label="Creative practice">
+        <div className="identity-grid" role="group" aria-label="Creative practice">
           <article className="identity-card identity-card--orange">
             <span className="identity-card__index">01 / LEARN</span>
             <strong>STUDENT</strong>
@@ -703,7 +725,7 @@ function App() {
           <p>I shoot portraits, nature, animals, and everyday scenes on my Pixel 8 Pro, looking for the feeling inside the frame—not just the view.</p>
           <a className="video-feature__link mobile-photo__link" href="/photography">EXPLORE PHOTOGRAPHY <span>↗</span></a>
         </div>
-        <div className="mobile-photo__gallery" aria-label="Mobile photography gallery">
+        <div className="mobile-photo__gallery" role="group" aria-label="Mobile photography gallery">
           <div className="mobile-photo__tile mobile-photo__tile--light"><img src="/photos/foggy-trail.jpeg" alt="A foggy trail crossing a green hillside." loading="lazy" /><span>FOG ON THE TRAIL / 01</span></div>
           <div className="mobile-photo__tile mobile-photo__tile--shape"><img src="/photos/dome-at-dusk.jpeg" alt="Ornate domes silhouetted against a sunset sky." loading="lazy" /><span>DOME AT DUSK / 02</span></div>
           <div className="mobile-photo__tile mobile-photo__tile--night"><img src="/photos/coast-at-sunset.jpeg" alt="A boat at sea beneath a vivid orange sun." loading="lazy" /><span>LAST LIGHT / COAST / 03</span></div>
