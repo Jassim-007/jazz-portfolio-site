@@ -2,58 +2,130 @@
   "redirects": [
     {
       "source": "/:path*",
-      "has": [{ "type": "host", "key": "host", "value": "jazz-portfolio-site.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "jazz-portfolio-site.vercel.app"
+        }
+      ],
       "destination": "https://www.muhammedjassim.me/:path*",
       "permanent": true
     }
   ],
   "rewrites": [
-    { "source": "/my-work", "destination": "/my-work.html" },
-    { "source": "/my-work/", "destination": "/my-work.html" },
-    { "source": "/photography", "destination": "/photography.html" },
-    { "source": "/photography/", "destination": "/photography.html" },
-    { "source": "/videography", "destination": "/videography.html" },
-    { "source": "/videography/", "destination": "/videography.html" }
+    {
+      "source": "/my-work",
+      "destination": "/my-work.html"
+    },
+    {
+      "source": "/my-work/",
+      "destination": "/my-work.html"
+    },
+    {
+      "source": "/photography",
+      "destination": "/photography.html"
+    },
+    {
+      "source": "/photography/",
+      "destination": "/photography.html"
+    },
+    {
+      "source": "/videography",
+      "destination": "/videography.html"
+    },
+    {
+      "source": "/videography/",
+      "destination": "/videography.html"
+    }
   ],
   "headers": [
     {
       "source": "/assets/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     },
     {
       "source": "/frames/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+        }
+      ]
     },
     {
       "source": "/frames-hd/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+        }
+      ]
     },
     {
       "source": "/frames-4k/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+        }
+      ]
     },
     {
       "source": "/photos/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+        }
+      ]
     },
     {
       "source": "/project-logos/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+        }
+      ]
     },
     {
       "source": "/project-covers/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+        }
+      ]
     },
     {
       "source": "/card-images/:path*",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+        }
+      ]
     },
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
       ]
     }
   ]
