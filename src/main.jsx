@@ -1,12 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import Lenis from 'lenis';
-import 'lenis/dist/lenis.css';
 import './style.css';
-
-gsap.registerPlugin(ScrollTrigger);
 
 const FRAME_COUNT = 120;
 const getCanvasDpr = () => {
@@ -374,11 +368,59 @@ function App() {
   const presenceIntroRef = useRef(null);
   const canvasRef = useRef(null);
   const [ready, setReady] = useState(false);
+  const [motionRuntime, setMotionRuntime] = useState(null);
   const [featuredFilmPlaying, setFeaturedFilmPlaying] = useState(false);
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactStatus, setContactStatus] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+    let started = false;
+    let idleCallback = 0;
+    let timeoutId = 0;
+    const loadMotion = async () => {
+      if (started) return;
+      started = true;
+      try {
+        const [{ gsap }, { ScrollTrigger }, { default: Lenis }] = await Promise.all([
+          import('gsap'),
+          import('gsap/ScrollTrigger'),
+          import('lenis'),
+        ]);
+        if (cancelled) return;
+        gsap.registerPlugin(ScrollTrigger);
+        setMotionRuntime({ gsap, ScrollTrigger, Lenis });
+      } catch (error) {
+        console.error('Could not load scroll animation:', error);
+      }
+    };
+    const onIntent = () => {
+      window.removeEventListener('wheel', onIntent);
+      window.removeEventListener('touchstart', onIntent);
+      window.removeEventListener('keydown', onIntent);
+      if (idleCallback && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleCallback);
+      window.clearTimeout(timeoutId);
+      loadMotion();
+    };
+    window.addEventListener('wheel', onIntent, { passive: true, once: true });
+    window.addEventListener('touchstart', onIntent, { passive: true, once: true });
+    window.addEventListener('keydown', onIntent, { once: true });
+    if ('requestIdleCallback' in window) idleCallback = window.requestIdleCallback(loadMotion, { timeout: 5000 });
+    else timeoutId = window.setTimeout(loadMotion, 3000);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('wheel', onIntent);
+      window.removeEventListener('touchstart', onIntent);
+      window.removeEventListener('keydown', onIntent);
+      if (idleCallback && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleCallback);
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!motionRuntime) return undefined;
+    const { gsap, ScrollTrigger, Lenis } = motionRuntime;
+    import('lenis/dist/lenis.css');
     const lenis = new Lenis({ duration: 0.7, anchors: true });
     lenisRef.current = lenis;
     const syncScrollTrigger = () => ScrollTrigger.update();
@@ -391,7 +433,7 @@ function App() {
       lenis.destroy();
       lenisRef.current = null;
     };
-  }, []);
+  }, [motionRuntime]);
 
   useEffect(() => {
     if (!window.location.hash) return undefined;
@@ -408,9 +450,11 @@ function App() {
       cancelAnimationFrame(firstFrame);
       cancelAnimationFrame(secondFrame);
     };
-  }, []);
+  }, [motionRuntime]);
 
   useEffect(() => {
+    if (!motionRuntime) return undefined;
+    const { gsap } = motionRuntime;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
     const context = gsap.context(() => {
@@ -431,8 +475,10 @@ function App() {
     }, presenceIntroRef);
 
     return () => context.revert();
-  }, []);
+  }, [motionRuntime]);
   useEffect(() => {
+    if (!motionRuntime) return undefined;
+    const { gsap } = motionRuntime;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
 
     const context = gsap.context(() => {
@@ -474,9 +520,11 @@ function App() {
     }, portfolioRef);
 
     return () => context.revert();
-  }, []);
+  }, [motionRuntime]);
 
   useEffect(() => {
+    if (!motionRuntime) return undefined;
+    const { ScrollTrigger } = motionRuntime;
     let cancelled = false;
     const bitmaps = new Map();
     const pending = new Set();
