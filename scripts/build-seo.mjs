@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
-const site = 'https://jazz-portfolio-site.vercel.app';
+const site = 'https://www.muhammedjassim.me';
 const previewDeployment = process.env.VERCEL_ENV === 'preview';
 const fullName = 'Muhammed Jassim';
 const shortName = 'Jazz';
@@ -33,12 +33,13 @@ const socialJson = JSON.stringify({
       url: site,
       jobTitle: 'AI and Data Science Engineering Student, Developer and Creator',
       description: personDescription,
+      image: `${site}/og-jazz-portfolio.png`,
       affiliation: { '@type': 'CollegeOrUniversity', name: 'MES College of Engineering' },
       address: { '@type': 'PostalAddress', addressLocality: 'Kuttippuram', addressRegion: 'Malappuram, Kerala', addressCountry: 'IN' },
       knowsAbout: ['Artificial intelligence', 'Data science', 'React', 'Vite', 'Web application development', 'Mobile photography', 'Video editing'],
       sameAs: socialLinks,
     },
-    { '@type': 'WebSite', '@id': `${site}/#website`, url: site, name: `${fullName} — ${shortName}`, inLanguage: 'en-IN', publisher: { '@id': `${site}/#person` } },
+    { '@type': 'WebSite', '@id': `${site}/#website`, url: site, image: `${site}/og-jazz-portfolio.png`, name: `${fullName} — ${shortName}`, inLanguage: 'en-IN', publisher: { '@id': `${site}/#person` } },
   ],
 }).replaceAll('<', '\\u003c');
 
@@ -101,8 +102,9 @@ function makePage({ path, title, description, content, noindex = false }) {
   return html;
 }
 
-const homeDescription = 'Muhammed Jassim (Jazz) is an AI and Data Science engineering student building practical apps, cinematic videos, and mobile photography.';
-const generatedPages = [{ path: '/', title: 'Muhammed Jassim (Jazz) | Developer & Creator', description: homeDescription, content: homeContent }];
+const homeDescription = 'Muhammed Jassim (Jazz) is an AI and Data Science student, developer, and creator from Kerala, India, building practical apps and creative work.';
+const homeTitle = 'Muhammed Jassim (Jazz) — AI & Data Science Student, Developer & Creator | Kerala';
+const generatedPages = [{ path: '/', title: homeTitle, description: homeDescription, content: homeContent }];
 for (const [path, page] of Object.entries(routePages)) {
   const content = `<div class="seo-fallback seo-fallback--collection"><a class="seo-fallback__skip" href="#main-content">Skip to content</a><header class="seo-fallback__collection-header"><a class="seo-fallback__brand" href="/">JAZZ<span>.</span></a>${navigation}</header><main class="seo-fallback__collection-main" id="main-content"><p class="seo-fallback__eyebrow">MUHAMMED JASSIM / JAZZ</p><h1>${h(page.heading)}</h1>${page.content}<nav class="seo-fallback__related" aria-label="More portfolio sections"><a href="/my-work">MY WORK</a><a href="/videography">VIDEO</a><a href="/photography">PHOTO</a></nav></main></div>`;
   generatedPages.push({ path, title: page.title, description: page.description, content });

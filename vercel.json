@@ -1,4 +1,12 @@
 {
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "key": "host", "value": "jazz-portfolio-site.vercel.app" }],
+      "destination": "https://www.muhammedjassim.me/:path*",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     { "source": "/my-work", "destination": "/my-work.html" },
     { "source": "/my-work/", "destination": "/my-work.html" },
