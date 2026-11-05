@@ -9,7 +9,14 @@ import './style.css';
 gsap.registerPlugin(ScrollTrigger);
 
 const FRAME_COUNT = 120;
-const frameUrl = (index) => '/frames-4k/ezgif-frame-' + String(index + 1).padStart(3, '0') + '.jpg';
+const getFrameDirectory = () => {
+  const renderScale = Math.min(window.devicePixelRatio || 1, 2);
+  const neededPixels = Math.max(window.innerWidth, window.innerHeight) * renderScale;
+  if (neededPixels <= 1280) return 'frames';
+  if (neededPixels <= 1920) return 'frames-hd';
+  return 'frames-4k';
+};
+const frameUrl = (index, directory) => '/' + directory + '/ezgif-frame-' + String(index + 1).padStart(3, '0') + '.jpg';
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const featuredFilm = { youtubeId: 'QbrYyD3Sm1s', title: 'Nethravathi Trek...' };
 const getYouTubeId = (value = '') => {
@@ -470,6 +477,8 @@ function App() {
     const loadQueue = [];
     const canvas = canvasRef.current;
     const context = canvas.getContext('2d', { alpha: false, desynchronized: true });
+    const frameDirectory = getFrameDirectory();
+    const cacheRadius = frameDirectory === 'frames-4k' ? 3 : 5;
     let currentFrame = 0;
     let scrollDirection = 1;
     let activeLoads = 0;
@@ -526,17 +535,17 @@ function App() {
         activeLoads += 1;
         (async () => {
           try {
-            const response = await fetch(frameUrl(index), { signal: controller.signal });
+            const response = await fetch(frameUrl(index, frameDirectory), { signal: controller.signal });
             if (!response.ok) throw new Error('Frame ' + (index + 1) + ' could not be loaded');
             const bitmap = await createImageBitmap(await response.blob());
-            if (cancelled || Math.abs(index - currentFrame) > 9) {
+            if (cancelled || Math.abs(index - currentFrame) > cacheRadius) {
               bitmap.close();
               return;
             }
             bitmaps.set(index, bitmap);
             if (index === currentFrame) setReady(true);
             for (const [cachedIndex, cachedBitmap] of bitmaps) {
-              if (Math.abs(cachedIndex - currentFrame) > 9) {
+              if (Math.abs(cachedIndex - currentFrame) > cacheRadius) {
                 cachedBitmap.close();
                 bitmaps.delete(cachedIndex);
               }
@@ -555,14 +564,19 @@ function App() {
     };
 
     const requestWindow = (target, direction) => {
+      // Fast scrolls can make the in-flight frames obsolete. Cancel those
+      // downloads immediately so the current frame is not stuck behind them.
+      for (const [frame, controller] of controllers) {
+        if (Math.abs(frame - target) > cacheRadius) controller.abort();
+      }
       const prioritizedFrames = [target];
-      for (let offset = 1; offset <= 8; offset += 1) prioritizedFrames.push(target + (direction * offset));
-      for (let offset = 1; offset <= 2; offset += 1) prioritizedFrames.push(target - (direction * offset));
+      for (let offset = 1; offset <= cacheRadius; offset += 1) prioritizedFrames.push(target + (direction * offset));
+      for (let offset = 1; offset <= Math.min(2, cacheRadius); offset += 1) prioritizedFrames.push(target - (direction * offset));
       loadQueue.splice(0, loadQueue.length, ...prioritizedFrames.filter((frame) => (
         frame >= 0 && frame < FRAME_COUNT && !bitmaps.has(frame) && !pending.has(frame)
       )));
       for (const [frame, bitmap] of bitmaps) {
-        if (Math.abs(frame - target) > 9) {
+        if (Math.abs(frame - target) > cacheRadius) {
           bitmap.close();
           bitmaps.delete(frame);
         }
@@ -620,6 +634,7 @@ function App() {
     <main className="portfolio" ref={portfolioRef}>
       <section className="hero-scroll" ref={heroRef} aria-label="Scroll-driven portrait introduction">
         <div className="hero-stage" ref={heroStageRef}>
+          <img className={'hero-stage__poster' + (ready ? ' hero-stage__poster--loaded' : '')} src="/frames/ezgif-frame-001.jpg" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           <canvas className="hero-stage__canvas" ref={canvasRef} aria-hidden="true" />
           <div className="hero-stage__shade" aria-hidden="true" />
           <div className="hero-stage__handoff" aria-hidden="true" />
