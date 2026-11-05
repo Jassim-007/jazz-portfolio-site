@@ -1,5 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import './style.css';
 
 const FRAME_COUNT = 120;
@@ -909,7 +911,13 @@ function App() {
 }
 
 const collection = collectionPages[window.location.pathname.replace(/\/$/, '')];
-createRoot(document.getElementById('root')).render(collection ? <CollectionPage page={collection} /> : <App />);
+createRoot(document.getElementById('root')).render(
+  <>
+    {collection ? <CollectionPage page={collection} /> : <App />}
+    <Analytics />
+    <SpeedInsights />
+  </>,
+);
 
 
 
